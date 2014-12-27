@@ -1,0 +1,159 @@
+<!DOCTYPE HTML>
+<!--
+	Alpha by HTML5 UP
+	html5up.net | @n33co
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Erlang Tutorials by Cole Fichter</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<meta name="description" content="A collection of Erlang/OTP tutorials." />
+		<meta name="keywords" content="" />
+		<!--[if lte IE 8]><script src="css/ie/html5shiv.js"></script><![endif]-->
+		<script src="js/jquery.min.js"></script>
+		<script src="js/jquery.dropotron.min.js"></script>
+		<script src="js/jquery.scrollgress.min.js"></script>
+		<script src="js/skel.min.js"></script>
+		<script src="js/skel-layers.min.js"></script>
+		<script src="js/init.js"></script>
+		<noscript>
+			<link rel="stylesheet" href="css/skel.css" />
+			<link rel="stylesheet" href="css/style.css" />
+			<link rel="stylesheet" href="css/style-wide.css" />
+		</noscript>
+		<!--[if lte IE 8]><link rel="stylesheet" href="css/ie/v8.css" /><![endif]-->
+	</head>
+	<body>
+
+		<!-- Header -->
+			<header id="header" class="skel-layers-fixed">
+				<h1><a href="index.html">Erlang Tutorials</a> by Cole Fichter</h1>
+				<nav id="nav">
+					<ul>
+						<li><a href="index.html">Home</a></li>
+						<li>
+							<a href="" class="icon fa-angle-down">Tutorials</a>
+							<ul>
+								<!--
+								<li><a href="generic.html">Generic</a></li>
+								<li><a href="contact.html">Contact</a></li>
+								<li><a href="elements.html">Elements</a></li>
+								-->
+								<li>
+									<a href="">MapReduce...</a>
+									<ul>
+										<li><a href="mapreduce1.html">One (single-node)</a></li>
+										<li><a href="mapreduce2.html">Two (clustered)</a></li>
+										<li><a href="mapreduce3.html">Three (replication)</a></li>
+									</ul>
+								</li>
+							</ul>
+						</li>
+						<!--
+						<li><a href="#" class="button">Sign Up</a></li>
+						-->
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Main -->
+			<section id="main" class="container">
+				<header>
+					<h2>MapReduce Part One</h2>
+					<p>We introduce the MapReduce paradigm by building a single-node parallel data processing system.</p>
+				</header>
+				<div class="box">
+					<span class="image featured"><img src="images/mapreduce/traffic_cropped.jpg" alt="" /></span>
+					<p>In part one we begin by creating a simple MapReduce system that runs on only one node. In part two, we'll adjust the system to work with multiple nodes in a cluster. Finally, in part three, we'll add replication and automatic failover when nodes crash.</p>
+
+					<p>
+						Complete code for this tutorial is available in the <a href="https://github.com/colefichter/DistributedMapReduce">GitHub repository</a>.
+					</p>
+
+					<h3>The MapReduce Paradigm</h3>
+
+					<p>MapReduce is a way of performing batch data processing in parallel. The workload is split up among many workers who each perform a computation (the <code>map()</code> function) on their portion of the data. Each worker passes on its results which are aggregated by a <code>reduce()</code> function. The final result is a single data value that represents the computation across the entire data set (which usually implies across many computers, but in our simple case we're using many workers all running on a single machine). In the real world, you can process just about any kind of data using this technique, but we're going to stick to lists of integers, for simplicity.
+					</p>
+
+					<p>Continuing with this theme of simplicity, we'll keep the architecture of the system very simple as well. The two main components will be a server module, called <code>mrs</code> (short for MapReduce Server), to coordinate activities and a worker module, called <code>worker</code> which will be responsible for storing integers and performing calculations on those lists of integers. The relationship between the server and the workers will be one-to-many; we'll start only one server which will then manage several workers.</p>
+
+					<h3>The Worker</h3>
+
+					<p>Let's begin with the code by looking at the <code>worker.erl</code> module, which contains all of the API and internal code for the worker processes (<a href="https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl" title="View full source for worker.erl">full source code available here</a>), and is simpler than the server code.						
+					</p>
+
+					<p>
+						The worker operates on a simple server loop containing a receive block. The only client API call required is a <code>new()</code> function to spawn a new worker process with an empty list of integers as its initial state:
+					</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=4:8"></script>
+					
+					<p>The <code>new()</code> call also registers the new worker process with the <code>mrs</code> server, making the entire initialization process for a new worker automatic. When we look at the server, we'll see exactly what happens during working registration.</p>
+
+					<p>
+						Inside the server loop for the worker, we have a receive block with several message types that represent different actions the worker can perform. The simplest is to reset the worker, clearing its data list:
+					</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=24:25"></script>
+
+					<p>Next, we may ask the worker to print out its current list of integers (data):</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=26:28"></script>
+
+					<p>And to store a new integer in the list:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=16:18"></script>
+
+					<p>Note that we prepended the new integer, <code>Int</code>, to the head of the list: <code>[Int|Numbers]</code>. This is an important technique to use in Erlang, <a href="http://mirkobonadei.com/erlang-lists-basic-concepts/">due to the way lists are implemented</a>. Appending items to the tail of a list is a much more costly operation.</p>
+
+					<p>Finally, the worker must be able to accept a <code>map</code> function and apply that function to each item in its data list, then return the results to the server:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=11:15"></script>
+
+					<h3>The Server</h3>
+
+					<p>Now let's look at the server, which will act as the command and control mechanism for a small army of parallel workers. First, the client API which contains a few simple functions to instruct the server to perform some simple operations:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=8:18"></script>
+
+					<p>And the most important client API call: <code>mapreduce(Map, Reduce)</code>, which takes as arguments a <code>map()</code> function and a <code>reduce()</code> function, commands the server to perform the MapReduce job, then awaits the result and returns it for display in the shell:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=20:25"></script>
+
+					<p>The server can be started by calling <code>mrs:start()</code>:
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=31:34"></script>
+
+					<p>The startup procedure is simple: begin with zero workers (an empty list) and spawn the server process, then register it so that we can access it by name when invoking API calls later on. </p>
+
+
+					<!--
+					<div class="row">
+						<div class="6u 12u(3)">
+							<h3>And now a subheading</h3>
+							<p>Adipiscing faucibus nunc placerat. Tempus adipiscing turpis non blandit accumsan eget lacinia nunc integer interdum amet aliquam ut orci non col ut ut praesent. Semper amet interdum mi. Phasellus enim laoreet ac ac commodo faucibus faucibus. Curae lorem ipsum adipiscing ac. Vivamus ornare laoreet odio vis praesent.</p>
+						</div>
+						<div class="6u 12u(3)">
+							<h3>And another subheading</h3>
+							<p>Adipiscing faucibus nunc placerat. Tempus adipiscing turpis non blandit accumsan eget lacinia nunc integer interdum amet aliquam ut orci non col ut ut praesent. Semper amet interdum mi. Phasellus enim laoreet ac ac commodo faucibus faucibus. Curae lorem ipsum adipiscing ac. Vivamus ornare laoreet odio vis praesent.</p>
+						</div>
+					</div>
+					-->
+				</div>
+			</section>
+			
+		<!-- Footer -->
+			<footer id="footer">
+				<ul class="icons">
+					<li><a href="https://twitter.com/MathasaurusRex" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+					<li><a href="https://github.com/colefichter" class="icon fa-github"><span class="label">Github</span></a></li>
+					<li><a href="http://www.linkedin.com/pub/cole-fichter/4/a5/b20" class="icon fa-linkedin"><span class="label">Twitter</span></a></li>
+				</ul>
+				<ul class="copyright">
+					<li>&copy; Cole Fichter. All rights reserved.</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+				</ul>
+			</footer>
+
+	</body>
+</html>
