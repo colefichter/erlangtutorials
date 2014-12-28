@@ -167,6 +167,42 @@
 
 					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=49:51"></script>
 
+					<h3>MapReduce Algorithms</h3>
+
+					<p>With the server and worker code complete, the final component we need to use the MapReduce system is a collection of algorithms to carry out meaningful computations over the data set. Each MapReduce algorithm we write will have the same format: inside an API call, we'll define a <code>map</code> function, then define a <code>reduce</code> function, then invoke <code>mrs:mapreduce(Map, Reduce)</code> to run the computation.</p>
+
+					<p>
+						For example, to count the number of integers stored in our system, our <code>map</code> function will output <code>1</code> regardless of the stored value, then our reduce function will count how many ones were emitted:
+					</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/compute.erl?slice=5:8"></script>
+
+					<p>An equivalent <code>reduce</code> operation would be to take the sum of the ones emitted from the <code>map</code> phase.</p>
+
+					<p>
+						An algorithm to sum the integers stored in the system is similar, except that the <code>map</code> phase emits each integer:
+					</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/compute.erl?slice=10:13"></script>
+
+					<p>Computing the mean of the data set requires a more complicated <code>reduce</code> function:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/compute.erl?slice=25:33"></script>				
+					
+					<p>You can see a few other complete algorithms in the <a href="https://github.com/colefichter/DistributedMapReduce/blob/master/src/compute.erl">compute.erl</a> module.</p>	
+
+					<p>Complete source code, scripts, and instructions for running the system are available in the <a href="https://github.com/colefichter/DistributedMapReduce">GitHub repository</a>.</p>
+
+					<h3>Exercises</h3>
+
+					<ul>
+						<li>Write an algorithm to compute the sum of the square of each integer.</li>
+						<li>Find a more efficient way to compute the <code>sum</code> of the stored integers.</li>
+						<li>Change the system to store any Erlang term, rather than integers only.</li>
+						<li>Adjust the system to automatically add workers as the size of the data set grows.</li>
+					</ul>
+
+
 
 					<!--
 					<div class="row">
