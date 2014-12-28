@@ -128,6 +128,45 @@
 
 					<p>The startup procedure is simple: begin with zero workers (an empty list) and spawn the server process, then register it so that we can access it by name when invoking API calls later on. </p>
 
+					<p>With this server API in place we're now ready to examine the server's internal server loop. It's very similar to the internal loop of the worker. The loop simply contains a receive block with various message patterns, dispatching commands and processing logic as required.</p>
+
+					<p>One of the first operations needed at runtime is registering worker processes. We print a helpful information message, invoke the (async) <code>mrs:rebalance()</code> API call to trigger data rebalancing across the workers, then prepend the new worker process ID to the list of workers and continue back into the loop.</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=75:79"></script>
+
+
+					<p>The <code>print</code> operation lists some diagnostic information to the shell and then requests that each worker print its information as well:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=71:74"></script>
+
+					<p>To reset the system, we simply dispatch a command to each worker instructing it to clear out its list of integers:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=80:82"></script>
+
+					<p>When storing new integer values in the system, we need to chose which worker should hold the value. To do so, we use a simple ring hash to choose the index of the worker in the <code>Workers</code> list, the send the worker a message commanding it to store the value:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=52:57"></script>
+
+					<p>The final server action to look at is again the <code>mapreduce</code> operation. The first part of a MapReduce job is to have each worker run the <code>map</code> function:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=38:43"></script>
+
+					<p>We then wait for each worker to reply with results:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=44:45"></script>
+
+					<p>Next, we have to convert the replies from a dictionary structure into a list, for easier processing in the <code>reduce</code> phase:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=46:47"></script>
+
+					<p>We then run the reduce function, once only, to aggregate the <code>map</code>results into a single, final, result value:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=48"></script>
+
+					<p>And, finally, send the final result back to the client process who requested the <code>mapreduce</code> job for display:</p>
+
+					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=49:51"></script>
+
 
 					<!--
 					<div class="row">
