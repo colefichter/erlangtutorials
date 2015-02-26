@@ -66,7 +66,7 @@
 				</header>
 				<div class="box">
 					<span class="image featured"><img src="images/mapreduce/traffic_cropped.jpg" alt="" /></span>
-					<p>Previously, in <a href="mapreduce1.html">part one</a>, we began by creating a simple MapReduce system that runs on only one node. Here in part two, we'll adjust the system to work with multiple nodes in a cluster. Finally, in part three, we'll add replication and automatic fail-over when nodes crash.</p>
+					<p>In <a href="mapreduce1.html">part one</a> we began by creating a simple MapReduce system that runs on only one node. Here in part two, we'll adjust the system to work with multiple nodes in a cluster. Finally, in part three, we'll add replication and automatic fail-over when nodes crash.</p>
 
 					<p>
 						Complete code for this tutorial is available in the <a href="https://github.com/colefichter/DistributedMapReduce2">GitHub repository</a>.
@@ -77,12 +77,12 @@
 					<p>MapReduce is a way of performing batch data processing in parallel. The workload is split up among many workers who each perform a computation (the <code>map()</code> function) on their portion of the data. Each worker passes on its results which are aggregated by a <code>reduce()</code> function. The final result is a single data value that represents the computation across the entire data set. In the real world, you can process just about any kind of data using this technique, but we're going to stick to lists of integers, for simplicity.
 					</p>
 
-					<p>Since we have already built a stand-alone MapReduce system, it's time to extend it into something that will operate as a cluster of identical nodes, or peers, collaborating as a cluster. Because each peer has the same capabilities, we won't have to worry about keeping track of 'primary' or 'secondary' nodes. On the contrary, we'll see that it's easy to send a request to any peer in the cluster and receive the correct response.
+					<p>Since we have already built a stand-alone MapReduce system, it's time to extend it into something that will operate as a cluster of identical nodes, or peers, collaborating on distributed computations. Because each peer has the same capabilities, we won't have to worry about keeping track of 'primary' or 'secondary' nodes. On the contrary, we'll see that it's easy to send a request to any peer in the cluster and receive the correct response.
 					</p>
 
 					<h3>Adding Distribution To The System</h3>
 
-					<p>To achieve this, we'll use a technique called "resource discovery", popularized in section 8.3 of the excellent book <a href="http://www.manning.com/logan/">Erlang and OTP In Action</a>. Following this pattern, we'll avoid hard-coding locations and make it easy to add nodes to the cluster by treating each MapReduce node as a service which can be registered and located from a shared registration service (the resource discovery system).
+					<p>To achieve this, we'll use a technique called "resource discovery", popularized in section 8.3 of the excellent book <a href="http://www.manning.com/logan/">Erlang and OTP In Action</a>. Following this pattern, we'll avoid hard-coding locations and make it easy to add nodes to the cluster by treating each MapReduce node as a service which can be registered with, and located from, a shared registration service.
 					</p>
 
 					<p>Another handy side-effect of this approach is that we won't have to make any changes whatsoever to our <a href="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/worker.erl">worker.erl</a> module. The original version of the <code>worker</code> already contains everything we need to operate in a multi-node environment.
@@ -90,7 +90,7 @@
 
 					<h3>A Crash Course In Resource Discovery</h3>
 
-					<p>For our purposes, think of a resource as any service that we want other nodes to have access to. In this case, we only have a single type of resource: the MapReduce service. Each node that participates in the system will advertise its availability, and also look up the other participating nodes, in order to communicate with them.						
+					<p>For our purposes, think of a resource as any service that we want other nodes to have access to. In this case, we only have a single type of resource: the MapReduce service. Each node that participates in the system will advertise its availability and also request MapReduce services from its peers.						
 					</p>
 
 					<h3>Booting The System</h3>
@@ -102,7 +102,7 @@
 
 					<p><code>&gt; ./start_contact_node.sh contact1</code></p>
 
-					<p>Later, we'll open more terminals and start a <code>server</code> node in each. The <code>server</code> nodes will automatically connect to the <code>contact</code> node by name, thus joining the cluster and seeing all of the other running peers.
+					<p>This contact node is just an empty Erlang system with none of our code loaded. Later, we'll open more terminals and start a <code>server</code> node in each. The <code>server</code> nodes will automatically connect to the <code>contact</code> node by name, thus joining the cluster and seeing the other running peers.
 					</p>
 
 					<h3>Modifying The Server</h3>
@@ -112,10 +112,10 @@
 
 					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=42:53"></script>
 
-					<p>It begins with the same three lines as before to start the server and register it, but then it performs the two resource discovery tasks described above. The function <code>add_local_resource(?SERVER, Pid)</code> advertises that this instance is prepared to offer itself up for use, then <code>add_target_resource_type(?SERVER)</code> makes a request to be informed of other peers offering a MapReduce service. Finally, <code>trade_resources()</code> invokes the network communication required to exchange those requests with the other nodes in the cluster. Since the world is asynchronous, we simply need to wait for a moment for other nodes to respond, then we're done the startup process including resource discovery.
+					<p>It begins with the same three lines as before to start the server and register it, but then it performs the two resource discovery tasks described above. The function <code>add_local_resource(?SERVER, Pid)</code> advertises that this instance is providing a service, then <code>add_target_resource_type(?SERVER)</code> makes a request to be informed of other peers offering a MapReduce service. Finally, <code>trade_resources()</code> invokes the network communication required to exchange those requests with the other nodes in the cluster. Since the world is asynchronous, we simply need to wait for a moment for other nodes to respond, then we're done the startup process including resource discovery.
 					</p>
 
-					<p>The next change to the server enables it to communicate with the other nodes in the cluster. Whereas before all communication was performed via direct function calling or single message passing using the <code>!</code> operator, now we need to send messages to all peers and collect their replies in order to coordinate computations. This is handled by:
+					<p>The next change enables the server to communicate with its peers. Whereas before all communication was performed via direct function calling or messages passed with the <code>!</code> operator, now we need to send messages to all peers and collect their replies in order to coordinate computations:
 					</p>
 
 					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=141:145"></script>
@@ -125,7 +125,7 @@
 
 					<h3>Modified Computation Algorithms</h3>
 
-					<p>Surprisingly, there are very few changes required to the <code>mapreduce</code> feature in order to make it work in a cluster. The biggest change is that rather than await a single <code>reduce</code> reply, we now need to collect replies from all of the peers in the cluster. Fortunately, this mirrors the process of collecting <code>map</code> replies from workers, which we looked at in Part One.
+					<p>There are very few changes required to the <code>mapreduce</code> feature in order to make it work in a cluster. The biggest change is that rather than await a single <code>reduce</code> reply, we now need to collect replies from all of the peers in the cluster. Fortunately, this mirrors the process of collecting <code>map</code> replies from workers, which we looked at in <a href="mapreduce1.html">part one</a>.
 					</p>
 
 					<p>One extra feature added to the system is support for a <code>finalize</code> function, which can be performed on the aggregated <code>reduce</code> result as a final step in the computation. This is handy, for example, when computing the mean of the values stored in the distributed system:
@@ -140,8 +140,8 @@
 					<h3>Exercises</h3>
 
 					<ul>
-						<li>Add a function to the <code>compute</code> module to compute the median.</li>
-						<li>Add a function to the <code>compute</code> module to compute the mode.</li>
+						<li>Add a function to the <code>compute</code> module to determine the median.</li>
+						<li>Add a function to the <code>compute</code> module to determine the mode.</li>
 						<li>Change the system to store any Erlang term, rather than integers only.</li>
 						<li>Read <a href="https://github.com/colefichter/DistributedMapReduce2/tree/master/resource_discovery">the source</a> of the resource discovery application to understand how it works.</li>
 					</ul>					
