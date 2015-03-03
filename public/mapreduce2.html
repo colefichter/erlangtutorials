@@ -93,7 +93,7 @@
 					<p>For our purposes, think of a resource as any service that we want other nodes to have access to. In this case, we only have a single type of resource: the MapReduce service. Each node that participates in the system will advertise its availability and also request MapReduce services from its peers.						
 					</p>
 
-					<h3>Booting The System</h3>
+					<h3>Bootstrapping The Cluster</h3>
 
 					<p>Connections between nodes in an Erlang cluster are transitive. That is, if <code>A</code> connects to <code>B</code> and <code>B</code> connects to <code>C</code>, then <code>A</code> will also be able to communicate with <code>C</code>. We'll take advantage of this property to make it easy to join the cluster.
 					</p>
@@ -137,6 +137,20 @@
 
 					<script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=25:27"></script>
 
+					<h3>Running The System</h3>
+					
+					<p>Running the updated system is similar to the single-node operation in Part One of this series, except that we'll need to run a few Erlang nodes at a time. The easiest way to do this is to open a separate terminal window for each node.</p>
+					
+					<p>To start, you should already have a contact node, named <code>contact1</code> running, as described in "Bootstrapping The Cluster" above. Now we can start two server nodes, each in their own terminal window. In the first terminal window run:</p>
+					
+					<p><code>&gt; ./start_server.sh server1</code></p>
+					
+					<p>In the second window, start <code>server2</code> by running:</p>
+
+					<p><code>&gt; ./start_server.sh server2</code></p>
+					
+					<p>You should now have one contact node and two server nodes running on your local computer. You can view the data stored in the cluster by calling <code>mrs:print().</code><em>in either server</em>. Storing integers and running computations works exactly as before, but take note that you can perform the operations in both server nodes! Each server is a fully functioning peer in the system.</p>
+					
 					<h3>Exercises</h3>
 
 					<ul>
