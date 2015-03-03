@@ -193,6 +193,14 @@
 
 					<p>Complete source code, scripts, and instructions for running the system are available in the <a href="https://github.com/colefichter/DistributedMapReduce">GitHub repository</a>.</p>
 
+					<h3>Running The System</h3>
+					
+					<p>The source repository contains bootstrapping scripts to start the server, create a few workers, and store some integers. To start the system, run</p>
+					
+					<p><code>&gt; ./start_server.sh</code></p>
+					
+					<p>Once running, we can view the data by calling <code>mrs:print().</code>, we can store a new number by calling <code>mrs:store(999).</code>, and we can run computations such as finding the sum by calling <code>compute:sum().</code>. Check out the <a href="https://github.com/colefichter/DistributedMapReduce/blob/master/src/compute.erl">compute.erl</a> module and try writing some more algorithms of your own.</p>
+
 					<h3>Exercises</h3>
 
 					<ul>
@@ -202,6 +210,9 @@
 						<li>Adjust the system to automatically add workers as the size of the data set grows.</li>
 					</ul>
 					
+					<h3>Part Two: Distributing The System</h3>
+					
+					<p>In the <a href="mapreduce2.html">next tutorial</a>, we change the system to operate as a cluster across multiple nodes (i.e. physical machines).</p>
 				</div>
 			</section>
 			
