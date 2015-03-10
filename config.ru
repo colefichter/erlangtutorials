@@ -1,7 +1,8 @@
 use Rack::Static,
   :urls => ["/images", "/js", "/css", "/fonts",
             "/mapreduce1.html",
-            "/mapreduce2.html"
+            "/mapreduce2.html",
+            "/mapreduce3.html"
             ],
   :root => "public"
 
