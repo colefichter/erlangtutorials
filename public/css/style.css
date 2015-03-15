@@ -1,6 +1,13 @@
 @import url(font-awesome.min.css);
 @import url("http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,300italic,400italic");
 
+
+/* Cole Fichter. Override stupid adblock blocking of social link icons: */
+.fa-NOT-twitter:before{content:"\f099"}
+.fa-NOT-github:before{content:"\f09b"}
+.fa-NOT-linkedin:before{content:"\f0e1"}
+
+
 /*
 	Alpha by HTML5 UP
 	html5up.net | @n33co
