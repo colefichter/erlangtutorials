@@ -1,0 +1,120 @@
+<%= partial :"partials/header" %>
+<body>
+<!-- Header -->
+<header id="header" class="skel-layers-fixed">
+    <%= partial :"partials/menu" %>
+</header>
+
+<!-- Main -->
+<section id="main" class="container">
+    <header>
+        <span class="icon major fa-cogs accent2"></span>
+        <h2>MapReduce Part Three</h2>
+        <p>We add data replication and automatic failover to the multi-node parallel data processing system.</p>
+    </header>
+    <div class="box">
+        <span class="image featured"><img src="images/mapreduce/traffic_cropped.jpg" alt="" /></span>
+        <p>In <a href="mapreduce1.html">part one</a> we began by creating a simple MapReduce system that runs on only one node. In <a href="mapreduce1.html">part two</a> we adjusted the system to work with multiple nodes in a cluster. Here, in part three, we'll add data replication and automatic fail-over when nodes crash.</p>
+
+        <p>
+            Complete code for this tutorial is available in the <a href="https://github.com/colefichter/DistributedMapReduce3">GitHub repository</a>.
+        </p>
+
+        <h3>Recap: What We've Done So Far</h3>
+
+        <p>This tutorial series <a href="mapreduce1.html">began</a> by creating a simple parallel data processing system that ran only on a single machine. In that system, we created worker processes to store a set of integers and run calculations over that dataset using the MapReduce paradigm. We then <a href="mapreduce2.html">adjusted the system</a> to run on multiple computers, or nodes, in a fully peer-to-peer topology. The decision not to use a master/slave arrangement will now come in handy as we add data replication and automatic fail-over to the distributed system. This will allow the cluster to maintain the data hosted by a node that crashes.
+        </p>
+
+        <p>On most platforms adding a replication feature like this would be a serious undertaking. Fortunately, Erlang's native message passing and crash signaling between physical nodes will do virtually all of the heavy lifting for us.</p>
+
+        <h3>Replication Basics</h3>
+
+        <p>In this simple replication scheme, each peer will randomly select a replication partner. The peer will send it's partner a full copy of it's partition of the data set and, in return, the partner will monitor the health of the peer. If the peer crashes the partner will be notified and will bring that peer's data into it's own partition, thus preserving the portion of the dataset that would have been lost when the peer crashed.
+        </p>
+
+        <p>To make clear what's going on, let's anthromorphize our servers and pretend that Alice and Bob are MapReduce servers having a conversation about replication:</p>
+
+        <ul>
+            <li><b>Alice</b>: Hi Bob. I've chosen you to be my replication partner. I'll need you to keep a copy of my data safe in case anything happens to me.</li>
+            <li><b>Bob</b>: Ok, that sounds great. I'll store your data over here and I'll keep an eye out for you. Let me know if you get in to trouble.</li>
+            <li><b>Alice</b>: Thanks! Will do.</li>
+            <li><i>[Some time goes by...]</i></li>
+            <li><b>Alice</b>: Hey Bob, I've added the number 12345 to my dataset. Can you update my replica?</li>
+            <li><b>Bob</b>: Ok, it's updated.</li>
+            <li><i>[Some more time goes by... and Alice chokes on an avocado pit and dies!]</i></li>
+            <li><b>Alice</b>: HELP, HELP, I'M DYING!</li>
+            <li><b>Bob</b>: Oh dear, that's not good. Alas, life must go on. I'll move Alice's replica into my dataset and love it like it was my own.</li>                     
+        </ul>
+
+        <p>At this point, Bob is now responsible for all of Alice's data, and the cluster has one less node (since Alice has died) so any future writes will be distributed evenly among the remaining peers (including Bob). You'll also note that in the skit above, Alice prudently kept her replica with Bob up-to-date when she added new values to her copy of the data. This an important feature. In our system the initial replication command will send the entire data partition to the replica, and we'll update that replica incrementally by sending new values to the replication partner as they are written.</p>
+        
+        <h3>Implementation</h3>
+
+        <p>In order to build a full-blown replication system in our MapReduce cluster, we need to add three small features:                     
+        </p>
+
+        <ol>
+            <li>To begin replication, the server needs to choose a peer and have all of its workers send their data to the chosen partner.</li>
+            <li>When a worker adds an integer to its list, it must notify the replication partner that the replica has changed.</li>
+            <li>A partner holding a replica dataset must monitor to original peer. If that original peer crashes, the replica will be brought into the main data set hosted at the partner node.</li>
+        </ol>
+
+        <h3>1) Kicking off Replication</h3>
+
+        <p>Once the cluster is up and running (see the previous tutorial for instructions), we'll turn replication on using the <code>replicate()</code> API call:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=43:45"></script>
+
+        <p>Each server will receive a <code>{replicate}</code> message in its main server loop. When that happens, it randomly selects another peer then commands all of its workers to send that peer their lists of integers:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=111:116"></script>
+
+        <p>Each worker handles that command by simply sending their list to the destination server:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=34:37"></script>
+
+        <p>Finally, when the replication partner (AKA: the destination server) receives the replica it stores a tuple containing the worker process's Pid and the list of integers in another list variable named <code>Replicas</code>:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=118:122"></script>
+
+        <p>When all of this message passing has completed for all servers, replication is up and running throughout the cluster.</p>
+
+        <h3>2) Incrementally Updating Replicas</h3>
+
+        <p>To enable incremental updates, each worker must notify the replica host of new additions to the data by calling <code>send_to_replica/2</code>:
+        </p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=20:23"></script>
+
+        <p>The <code>send_to_replica/2</code> function is very compact, but note that the first argument pattern matches before a destination server has been chosen, and does nothing (that is, before replication is turned on the worker doesn't need to send updates anywhere):
+        </p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=40:44"></script>
+
+        <h3>3) Monitoring Peers for Crashes</h3>
+
+        <p>The last step is for each replication partner to monitor the originating peer in case it crashes. The first step in this process is to use the process monitoring feature in Erlang to turn on monitoring of each process that sends us a replica. Although not mentioned above, we saw this already; it's the call to <code>erlang:monitor/2</code>:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=118:122"></script>
+
+        <p>With monitoring of the worker processes enabled, the replication partner can receive messages indicating that workers have died. When that happens, the replica from the crashing worker is located in the list of replicas and stored in the main dataset:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=128:133"></script>
+
+        <h3>Using and Testing Replcation</h3>
+
+        <p>With the cluster running, you can pretty easily test replication and fail-over. Having at least two nodes running, run some computations as we did before (e.g. <code>compute:sum()</code>). Then, turn on replication by calling <code>mrs:replicate()</code> at any node. You'll see lots of diagnostic messages printed in each node as the replicas are sent around the cluster. Finally, to test fail-over, you can manually kill individual worker processes or kill several at a time by stopping one of the nodes. In the remaining nodes, you'll see diagnostic output showing the fail-over as it happens. Now run some computations again to ensure that you're getting the same values as before.</p>
+
+        <h3>Exercises</h3>
+
+        <ul>
+            <li>Update the worker so that it <a href="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl#L31">deletes the existing replica</a> when it resets its list of integers.</li>
+            <li>What happens if the node hosting a replica fails (that is, the partner not the originator)? Can you change the system so that it automatically creates a new replica hosted on a different node?</li>
+            <li>Change the system to store any Erlang term, rather than integers only.</li>
+            <li>Adjust the system to automatically add workers as the size of the data set grows.</li>
+        </ul>
+
+    </div>
+</section>
+
+<%= partial :"partials/footer" %>

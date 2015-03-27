@@ -1,0 +1,123 @@
+<%= partial :"partials/header" %>
+<body>
+<!-- Header -->
+<header id="header" class="skel-layers-fixed">
+    <%= partial :"partials/menu" %>
+</header>
+
+<!-- Main -->
+<section id="main" class="container">
+    <header>
+        <span class="icon major fa-cogs accent2"></span>
+        <h2>Key/Value Server Part One</h2>
+        <p>We being this series by creating a simple in-memory key/value storage system.</p>
+    </header>
+    <div class="box">
+        <span class="image featured"><img src="images/kv/keys_cropped.jpg" alt="" /></span>
+        <p>In part one we create a key/value server that stores data in memory. In part two we'll add a few lines of code to make the server persist it's data to disk on shutdown and restore them again on startup.</p>
+
+        <p>
+            Complete code for this tutorial is available in the <a href="https://github.com/colefichter/key_value_tutorial">GitHub repository</a>.
+        </p>
+
+        <h3>Motivation</h3>
+
+        <p>The native <code>dict</code> module in Erlang provides an excellent data structure for storing pairs of keys and values, but there are some use cases where it can be cumbersome to manage the state of a dictionary. For example, some applications have cross-cutting concerns, like caching, which require access to state in many places. In such scenarios, one must transform the dictionary into a key/value server which can be accessed by any client willing to make a remote procedure call.
+        </p>
+
+        <h3>Client API</h3>
+
+        <p>Although "remote procedure call" is a big scary phrase, the client API for the key/value server is exceedingly simple. Once the server is running, any client can save a value into the store by calling</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=20"></script>
+
+        <p>The value returned to the client is a unique string containing the hash of the stored value. When a client wishes to retrieve the value again, it can pass the hash as the only argument to</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=23"></script>
+
+        <p>which returns the stored value or, if the key was not found, the atom <code>not_found</code>. Likewise, the value can be removed from the server by passing the hash into</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=26"></script>
+
+        <p>which always returns the atom <code>ok</code>, even if the key is not found.</p>
+
+        <p>That <code>rpc/1</code> function being used in the client API is a very simple send/receive block that reduces the amount of repeated code. Here's what it looks like:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=57:63"></script>
+
+        <p>The three simple functions above, along with <code>start/0</code> and <code>stop/0</code> are the entire client API for this project. Let's look now at the server; it's <em>almost</em> as simple as the client.</p>
+
+        <h3>The Server Implementation</h3>
+
+        <p>The first operation that every server needs to handle is starting itself up. Our server has a simple function called <code>start</code> which takes no arguments.
+        </p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=11:15"></script>
+
+        <p>Starting the <code>crypto</code> OTP application is required to create the hashed keys. Next, we spawn a server process with an empty dictionary as it's only argument and register that process with the name <code>kv</code>. Doing so allows our <code>rpc</code> function (above) to talk with the server without having to keep track of the server process.
+        </p>
+
+        <p>Inside the spawned server process, it runs the <code>server_loop/1</code> function, which takes a dictionary as its only argument, then immediately enters a <code>receive</code> block. The <code>receive</code> block has four patterns to match the four operations that can be requested by a client. First, we need to store values:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=33:37"></script>
+
+        <p>We create a hash of the value, then use that hash as the key to save with the value in the state dictionary, <code>Dict</code>. We then respond to the client a message containing the new <code>Hash</code> that uniquely represents the stored value, <code>V</code>, and loop back to process the next incoming message.</p>
+
+        <p>When a client asks to lookup a value by its hash key, the server checks to see if the key is stored in the state dictionary, <code>Dict</code>, and returns to the client the associated value or the atom <code>not_found</code> if the key doesn't exist:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=38:44"></script>
+
+        <p>A request to delete a key/value pair is almost the same as a lookup:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=45:51"></script>
+
+        <p>If the key exists in the state dictionary, we remove it and update the state for the next server loop. Whether the key was in the dictionary or not, we send the client a simple reply with the atom <code>ok</code>.</p>
+
+        <p>The final server operation is to stop running:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=52"></script>
+
+        <p>In addition to the server loop, there are two utility functions that handle creation of the stringified hashes:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl?slice=66:73"></script>
+
+        <p>There are two steps to creating each hash:</p>
+
+        <ol>
+            <li>Calculate a 160-bit SHA1 binary hash of the data value.</li>
+            <li>Convert the 160-bit binary hash to a HEX-encoded string.</li>
+        </ol>
+
+        <p>The complicated aspect is formatting the binary hash as a string. The magic of that operation is due to the format string <code>"~40.16.0b"</code>. The three parts of that string have special meanings:</p>
+
+        <ul>
+            <li><code>~</code> this character indicates the start of the format sequence. It doesn't have any bearing on the final format of the string.
+            <li><code>40</code> is the width of the output field. The binary hash is 160 bits long, and the default 'element' size is 8 bytes. Thus, each binary hash contains 160/8 = 20 elements. Those 20 elements are converted during the pattern match into 20 big unsigned integers. Finally, we want to express each integer as a HEX value, which takes two string characters per integer. So the final length of the entire string is (160/8)*2 = 20 * 2 = 40 characters. If you found that confusing, don't fret; it <em>is</em> confusing. The short story is that 160 bits makes 20 numbers (each using 8 bits) and each of those numbers takes 2 characters to write in HEX, so we need 40 characters to express the entire hash as a string.
+            </li>
+            <li><code>16</code> specifies the precision of the output elements. In this case it will be interpreted as using base-16, or HEX, numbers.
+            </li>
+            <li><code>0b</code> specifies the character "0" to be used for padding, but is not used in our case since the binary hash and the output string are exactly the same length.</li>
+        </ul>
+
+        <p>And that's all the code for the entire client-server system! (Actually, if you look in the git repo you'll find a bunch of unit tests too, but those don't count.) Let's try it out in the Erlang shell:</p>
+
+        
+<pre>> erl
+Eshell V6.3  (abort with ^G)
+1> c(kv).
+{ok,kv}
+2> kv:start().
+ok
+3> kv:lookup("Hello").
+not_found
+4> K1 = kv:store("Cole lives in Canada.").
+"66de350ed22175cca006caf8ea8fd1bf80f44e1c"
+5> kv:lookup(K1).
+"Cole lives in Canada."
+6> kv:stop().
+{stop}</pre>
+
+    </div>
+</section>
+
+<%= partial :"partials/footer" %>
