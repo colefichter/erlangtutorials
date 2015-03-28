@@ -42,6 +42,12 @@ end
   end
 end
 
+['/kv2', '/kv2.html'].each do |path|
+  get path do
+    erb :kv2
+  end
+end
+
 
 get '*' do
   redirect to('/')

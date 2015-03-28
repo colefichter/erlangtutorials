@@ -1,0 +1,65 @@
+<%= partial :"partials/header" %>
+<body>
+<!-- Header -->
+<header id="header" class="skel-layers-fixed">
+    <%= partial :"partials/menu" %>
+</header>
+
+<!-- Main -->
+<section id="main" class="container">
+    <header>
+        <span class="icon major fa-cogs accent2"></span>
+        <h2>Key/Value Server Part Two</h2>
+        <p>In <a href="kv1.html">part one</a> we created an in-memory key/value storage system. Here in part two we'll make it persist the state to disk during shutdowns.</p>
+    </header>
+    <div class="box">
+        <span class="image featured"><img src="images/kv/keys_cropped.jpg" alt="" /></span>
+        <p>In <a href="kv1.html">part one</a> we created a key/value server that stores data in memory. Here in part two we'll add a few lines of code to make the server persist its data to disk on shutdown and restore them again on startup.</p>
+
+        <p>
+            Complete code for this tutorial is available in the <a href="https://github.com/colefichter/key_value_tutorial">GitHub repository</a>.
+        </p>
+
+        <h3>Adding Persistent State</h3>
+
+        <p>The existing key/value server works well, but it will lose its state when shut down. Fortunately, it will take only a few lines of new code to improve it.</p>
+
+        <p>In the previous tutorial we used the code in the <a href="https://github.com/colefichter/key_value_tutorial/blob/master/kv.erl">kv.erl</a> module. I've duplicated that code into a module called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl">pkv.erl</a>, which is where we'll extend the server to read and write its data to disk.</p>
+
+        <p>The business logic for the change is simple: when the server is shutting down, it needs to write the keys and values from its state dictionary to a disk file. When starting, if that disk file exists the server must load it and parse the contents back into the state dictionary.</p>
+
+        <p>Writing the terms two disk requires two functions. First, we'll add</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=59:61"></script>
+
+        <p>which extracts a list of <code>{Key, Value}</code> tuples from the state dictionary, then passes them to the second function, called <code>unconsult</code>. This function is the logical inverse of the native <code>file:consult/1</code> function provided by OTP:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=89:92"></script>
+
+        <p>The <code>unconsult</code> function accepts a list, opens a file on disk, then writes each item in the list to the file by using the pretty print formatter, <code>~p</code>, and the <code>io</code> module's native serialization scheme. This results in a data file that is very neat and tidy:</p>
+
+        <pre>
+{"beefe116d3c0889262cf492b317e0a024e3103c4","Cole is Canadian."}.
+{"64925710385ac7111192c31282c459b8cfc235de","Canadians eat bacon."}.
+        </pre>
+
+        <p>When the server starts back up, this convenient format means we can read the entire disk file with a simple call to <code>file:consult/1</code> like so:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=63:67"></script>
+
+        <p>If the file does not exist, an empty dictionary is returned (as in the first tutorial).</p>
+
+        <p>Integrating these new features into the server requires only one new line of code in the <code>start/0</code> function:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=13:18"></script>
+
+        <p>and one new line in the server loop where it handles a <code>{stop}</code> command:</p>
+
+        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=54:56"></script>
+
+        <p>And that's it! Those small additions have converted a non-persistent, in-memory server into a persistent server that retains its state across restarts.</p>
+
+    </div>
+</section>
+
+<%= partial :"partials/footer" %>
