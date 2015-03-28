@@ -58,7 +58,7 @@
         <p>It's time to dig into the code changes, starting with the <a href="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl">mrs.erl</a> module. To begin, let's look at the server's <code>start</code> function:
         </p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=42:53"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=43:53"></div>
 
         <p>It begins with the same three lines as before to start the server and register it, but then it performs the two resource discovery tasks described above. The function <code>add_local_resource(?SERVER, Pid)</code> advertises that this instance is providing a service, then <code>add_target_resource_type(?SERVER)</code> makes a request to be informed of other peers offering a MapReduce service. Finally, <code>trade_resources()</code> invokes the network communication required to exchange those requests with the other nodes in the cluster. Since the world is asynchronous, we simply need to wait for a moment for other nodes to respond, then we're done the startup process including resource discovery.
         </p>
@@ -66,7 +66,7 @@
         <p>The next change enables the server to communicate with its peers. Whereas before all communication was performed via direct function calling or messages passed with the <code>!</code> operator, now we need to send messages to all peers and collect their replies in order to coordinate computations:
         </p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=141:145"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=142:145"></div>
 
         <p>Messaging the entire cluster is straight forward: get the list of <em>all</em> peers (including the current node) from the local resource cache, then send each a direct message. Finally, return the number of peers messaged, in case it comes in handy for debugging.
         </p>
@@ -79,11 +79,11 @@
         <p>One extra feature added to the system is support for a <code>finalize</code> function, which can be performed on the aggregated <code>reduce</code> result as a final step in the computation. This is handy, for example, when computing the mean of the values stored in the distributed system:
         </p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/compute.erl?slice=25:34"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/compute.erl?slice=26:35"></div>
 
         <p>The aggregated result is a tuple <code>{Sum, Count}</code> and in the finalize phase we simply perform a division operation to produce the mean value that we were looking for. For many simple algorithms, nothing needs to be done during the <code>finalize</code>, so a default is provided:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=25:27"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce2/blob/master/src/mrs.erl?slice=26:28"></div>
 
         <h3>Running The System</h3>
         

@@ -1,13 +1,18 @@
 require 'sinatra'
 require 'sinatra/partial'
 
-# get '/' do
-#   "Hello World!"
-# end
-
+require 'open-uri'
 
 register Sinatra::Partial
 set :partial_template_engine, :erb
+
+before do
+  expires 600, :public, :must_revalidate
+end
+
+get '/proxy' do
+  output = URI.parse(params[:url]).read
+end
 
 #Index page
 ['/?', '/index', '/index.html'].each do |path|
@@ -47,7 +52,6 @@ end
     erb :kv2
   end
 end
-
 
 get '*' do
   redirect to('/')

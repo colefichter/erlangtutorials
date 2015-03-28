@@ -63,19 +63,19 @@
 
         <p>Once the cluster is up and running (see the previous tutorial for instructions), we'll turn replication on using the <code>replicate()</code> API call:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=43:45"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=44:46"></div>
 
         <p>Each server will receive a <code>{replicate}</code> message in its main server loop. When that happens, it randomly selects another peer then commands all of its workers to send that peer their lists of integers:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=111:116"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=112:117"></div>
 
         <p>Each worker handles that command by simply sending their list to the destination server:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=34:37"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=35:38"></div>
 
         <p>Finally, when the replication partner (AKA: the destination server) receives the replica it stores a tuple containing the worker process's Pid and the list of integers in another list variable named <code>Replicas</code>:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=118:122"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=119:123"></div>
 
         <p>When all of this message passing has completed for all servers, replication is up and running throughout the cluster.</p>
 
@@ -84,22 +84,22 @@
         <p>To enable incremental updates, each worker must notify the replica host of new additions to the data by calling <code>send_to_replica/2</code>:
         </p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=20:23"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=21:24"></div>
 
         <p>The <code>send_to_replica/2</code> function is very compact, but note that the first argument pattern matches before a destination server has been chosen, and does nothing (that is, before replication is turned on the worker doesn't need to send updates anywhere):
         </p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=40:44"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/worker.erl?slice=41:45"></div>
 
         <h3>3) Monitoring Peers for Crashes</h3>
 
         <p>The last step is for each replication partner to monitor the originating peer in case it crashes. The first step in this process is to use the process monitoring feature in Erlang to turn on monitoring of each process that sends us a replica. Although not mentioned above, we saw this already; it's the call to <code>erlang:monitor/2</code>:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=118:122"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=119:123"></div>
 
         <p>With monitoring of the worker processes enabled, the replication partner can receive messages indicating that workers have died. When that happens, the replica from the crashing worker is located in the list of replicas and stored in the main dataset:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=128:133"></script>
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce3/blob/master/src/mrs.erl?slice=129:134"></div>
 
         <h3>Using and Testing Replcation</h3>
 

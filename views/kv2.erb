@@ -30,11 +30,11 @@
 
         <p>Writing the terms two disk requires two functions. First, we'll add</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=59:61"></script>
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=60:62"></div>
 
         <p>which extracts a list of <code>{Key, Value}</code> tuples from the state dictionary, then passes them to the second function, called <code>unconsult</code>. This function is the logical inverse of the native <code>file:consult/1</code> function provided by OTP:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=89:92"></script>
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=90:93"></div>
 
         <p>The <code>unconsult</code> function accepts a list, opens a file on disk, then writes each item in the list to the file by using the pretty print formatter, <code>~p</code>, and the <code>io</code> module's native serialization scheme. This results in a data file that is very neat and tidy:</p>
 
@@ -45,17 +45,17 @@
 
         <p>When the server starts back up, this convenient format means we can read the entire disk file with a simple call to <code>file:consult/1</code> like so:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=63:67"></script>
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=64:68"></div>
 
         <p>If the file does not exist, an empty dictionary is returned (as in the first tutorial).</p>
 
         <p>Integrating these new features into the server requires only one new line of code in the <code>start/0</code> function:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=13:18"></script>
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=14:19"></div>
 
         <p>and one new line in the server loop where it handles a <code>{stop}</code> command:</p>
 
-        <script src="http://gist-it.appspot.com/https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=54:56"></script>
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=55:57"></div>
 
         <p>And that's it! Those small additions have converted a non-persistent, in-memory server into a persistent server that retains its state across restarts.</p>
 

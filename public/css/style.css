@@ -7,6 +7,12 @@
 .fa-NOT-github:before{content:"\f09b"}
 .fa-NOT-linkedin:before{content:"\f0e1"}
 
+.codeblock pre { margin-bottom: 5px; }
+.codefooter { 
+	text-align: right;
+	padding-right: 20px;
+	margin-bottom: 15px;
+}
 
 /*
 	Alpha by HTML5 UP
