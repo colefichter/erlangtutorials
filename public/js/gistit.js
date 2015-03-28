@@ -27,7 +27,7 @@ var downloadAllRawFiles = function(rawFileUrls) {
     $.each(rawFileUrls, function(i, x){ 
         $.ajax({ 
             type: 'GET',
-            url: "http://localhost:9292/proxy?url=" + x,
+            url: "/proxy?url=" + x,
             //Need to do it this way to block before returning the rawFileUrls.
             async:   false,
             success: function (content) {
