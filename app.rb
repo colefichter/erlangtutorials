@@ -53,6 +53,12 @@ end
   end
 end
 
-get '*' do
+['/dht1', '/dht1.html'].each do |path|
+  get path do
+    erb :dht1
+  end
+end
+
+get '*' do |path|
   redirect to('/')
 end
