@@ -42,6 +42,69 @@
 
         <p>Each node in the system will be given responsibility for a contiguous subset of this keyspace. So, hypothetically, if we had <i>n</i> nodes, each node would be the authoritative location for 2<sup>160</sup>/<i>n</i> keys. And which node is responsible for storing a given key? The first node whose ID value (more on this later) is greater than or equal to the key. Such a node is called the "successor node" of the key.</p>
 
+        <h3>A Simple Example</h3>
+
+        <p>To clarify the point, imagine the following small-scale scenario. Suppose the keys are the integers 0, 1, ..., 7, then the keyspace contains only those 8 possible keys. We can imagine the keyspace as a ring with the keys spaced around it clockwise, starting with 0 at the 12 o'clock position.</p>
+
+        <figure>
+            <img src="images/dht/ring.png" />
+            <figcaption>Credit: http://www.cs.nyu.edu/courses/fall07/G22.2631-001/Chord.ppt</figcaption>
+        </figure>
+
+        <p>As each node joins the network, it chooses a key at random to use as its ID. To locate the successor node responsible for a given key, we begin at the first node (with ID 0, in this case) and move clockwise around the ring until we locate the node whose ID is immediately greater than or equal to the key value. (Of course, we must take care to handle the wrap-around point on the ring when moving past key 7 back to key 0.)</p>
+
+        <p>From the diagram it's easy to understand why rebalancing is so much easier under this scheme. Suppose node 1 leaves the network. To preserve its data key 1 would be moved to node three, but the keys already stored at nodes 0 and 3 would be unaffected. Likewise, if we added a node with ID 6 then the key 6 would have to be moved from node 0 to node 6, but the keys stored on nodes 1 and 3 would be unaffected. This is far superior to the rebalancing situation in a conventional hash table when virtually all of the keys would be moved between buckets.</p>
+
+        <p>This idea of locating the successor node by comparing node IDs with keys (since both are hashes) is the central concept to making a working DHT. Virtually all the operations - joining the ring, storing values, finding values, replication, etc - are dependent on being able to locate the successor node to a given key.</p>
+
+        <h3>Implementation Baby Steps</h3>
+
+        <p>Even with all of this theory in hand, building a full-blown distributed hash table is a confusing affair. Rather than diving right in, we're instead going to build up a DHT in three stages, starting with something that seems kind of unrelated: a very simple ring of processes.</p>
+
+        <p>In terms of architecture, this process ring will be essentially a cyclical doubly-linked list. After spawning some processes, we'll link each process with it's neighbours, called <code>Next</code> and <code>Prev</code>, making sure to link the first process and last process together in the same way (much like a dog chasing its own tail).</p>
+
+        <p>When the ring is linked-up and ready to go, we will then pass messages around the ring in either direction (clockwise or anti-clockwise) and use a counter to expire the message after it has been handled by a set number of processes in the ring.</p>
+
+        <p>Let's look at the code, starting with the obvious stuff: spawning the processes.</p>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/ring.erl?slice=26:32"></div>
+
+        <p>The only argument to the <code>start/1</code> function is the number of processes to create in the ring. A list comprehension is used to spawn the desired number of processes, then we link each process to it's neighbours with the <code>link_all/1</code> and join the ends of the list together with the call <code>link(Last, First)</code>.</p>
+
+        <p>Linking any two adjacent process together is as simple as sending each a message indicating that the other process is a neighbour:</p>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/ring.erl?slice=46:49"></div>
+
+        <p>And linking all the processes in a list (except for linking the first and last process) simply works through the list two items at a time and calling <code>link/2</code>:</p>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/ring.erl?slice=40:44"></div>
+
+        <p>At this point we've got a ring of process who can each communicate with its neighbours. The server loop in which each process is waiting is very simple. The patterns that handle setting the neighbour references and stopping the process don't warrant any interest. Instead, let's look at how messages get passed around the ring:</p>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/ring.erl?slice=55:66"></div>
+
+        <p>When a message has been handled, or 'relayed', at least <code>NumRelays</code> times we print a message indicating the message expiry and discard it. For messages that have not yet expired, the relaying process will select its <code>Next</code> or <code>Prev</code> neighbour depending on the desired <code>Direction</code> then pass the message along to that process (making sure to increment the relay counter).</p>
+
+        <p>We can start a message travelling around the ring by calling <code>send_cw/3</code> and <code>send_anti_cw/3</code>. Here's how it looks in practice:</p>
+
+<pre class="erlag-repl">> c(ring).
+> FirstProccess = ring:start(5).
+> ring:send_anti_cw("Hi", FirstProccess, 10).
+> {relay,anti_clockwise,10,1,"Hi"}
+> <0.38.0> Relaying 1 "Hi"
+> <0.42.0> Relaying 2 "Hi"
+> <0.41.0> Relaying 3 "Hi"
+> <0.40.0> Relaying 4 "Hi"
+> <0.39.0> Relaying 5 "Hi"
+> <0.38.0> Relaying 6 "Hi"
+> <0.42.0> Relaying 7 "Hi"
+> <0.41.0> Relaying 8 "Hi"
+> <0.40.0> Relaying 9 "Hi"
+> <0.39.0> Relaying 10 "Hi"
+> <0.38.0> Dropping message "Hi" after 10 relays.
+</pre>
+
+        <p>This process ring may seem overly simple, but it's a critical step in creating a functioning distributed hash table. In the next tutorial we're going to build a simulated DHT. It will have the <code>store</code> and <code>lookup</code> features of a DHT, but rather than being distributed across physical machines we'll use a process ring similar to this one to simulate a network, with each process acting as a separate DHT node. In the third tutorial we'll take the features from that simulated DHT and package them in a system which can be deployed across multiple Erlang nodes and physical machines to work as a complete distributed hash table.</p>
 
     </div>
 </section>

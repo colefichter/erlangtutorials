@@ -14,6 +14,14 @@
 	margin-bottom: 15px;
 }
 
+figure {
+	margin-bottom: 2em;
+}
+
+figcaption {
+	font-style: italic;
+}
+
 /*
 	Alpha by HTML5 UP
 	html5up.net | @n33co
@@ -27,7 +35,7 @@
 	}
 
 	body, input, select, textarea {
-		color: #777;
+		color: #3D4144; /* #777; */
 		font-family: "Source Sans Pro", sans-serif;
 		font-size: 16pt;
 		font-weight: 300;
