@@ -15,13 +15,13 @@
     <div class="box">
         <span class="image featured"><img src="images/dht/books_cropped.png" alt="" /></span>
         
-        <p>In part one we introduce the concept of a distributed hash table and build a simple process ring. In part two we'll simulate a DHT with process all running in the same node. Finally, in part three we'll extend the process DHT to a full-blown, multi-node DHT.</p>
+        <p>In part one we introduce the concept of a distributed hash table and build a simple process ring. In part two we'll simulate a DHT with processes running in the same node. Finally, in part three we'll extend the process DHT to a full-blown, multi-node DHT.</p>
 
         <p>
             Complete code for this tutorial is available in the <a href="https://github.com/colefichter/process_dht/blob/master/src/ring.erl">GitHub repository</a>.
         </p>
 
-        <h3>What is a DHT?</h3>
+        <h3>What is a Distributed Hash Table?</h3>
 
         <p>Most developers are familiar with hash tables. Store a value, get a key. Lookup a key, get a value. But what happens if you need to scale this idea to a second computer? How do you implement a hash table across multiple physical machines? Enter the distributed hash table: it has some intriguing characteristics that are impossible with a vanilla hash table:</p>
 
@@ -29,16 +29,18 @@
             <li>Fault Tolerance: using many physical machines, data can be replicated to survive individual failures.</li>
             <li>Massive Scale: with essentially unlimited horizontal scaling (i.e. adding more machines) there aren't many effective bounds on the amount of data that can be stored in a DHT.</li>
             <li>Peer-to-peer Architecture: a DHT has a completely decentralized architecture which prevents bottlenecks and single-point-of-failure.</li>
-            <li>Consistent Hashing: unlike a regular hash table, Keys and Values only rarely need to be rebalanced.</li>
+            <li>Consistent Hashing: unlike a regular hash table, Keys and Values rarely need to be rebalanced.</li>
         </ul>
+        
+        <p>These properties make DHTs an indespensible tool in modern software systems. They are the reason why BitTorrent can find files without using a centralized server, and how modern non-relational (so called "No SQL") datastores can acheive massive scale.</p>
 
         <h3>Consistent Hashing and the Keyspace</h3>
 
-        <p>The central idea that allows DHTs to fulfill all of the goals above is: consistent hashing within a finite keyspace. Like the humble stack, let's deal with those ideas 'last things first and first things last'.</p>
+        <p>The central idea that allows DHTs to fulfill all of the goals above is consistent hashing within a finite keyspace. Like the humble stack, let's deal with those ideas 'last things first and first things last'.</p>
 
-        <p>As with a regular hash table, the keys in a DHT are fixed length hashes of the value being stored. A typical choice for hashing would be a 160-bit SHA-1 hash, and that's what we will be using in this tutorial series. Given that we've chosen a 160-bit key, it follows that the total number of possible keys is 2<sup>160</sup>. So, you can think of the keyspace as the set of all possible keys. All 2<sup>160</sup> of them. It should now be obvious that the keyspace must be finite in size, since we know exactly how many keys it contains. (Note: if you're familiar with linear algebra, the keyspace is somewhat akin to a finite vector space.)</p>
+        <p>As with a regular hash table, the keys in a DHT are fixed length hashes of the value being stored. A common choice for hashing would be a 160-bit SHA-1 hash, and that's what we will be using in this tutorial series. Given that we've chosen a 160-bit key, it follows that the total number of possible keys is 2<sup>160</sup>. So, you can think of the keyspace as the set of all possible keys. All 2<sup>160</sup> of them. It should now be obvious that the keyspace must be finite in size, since we know exactly how many keys it contains. (Note: if you're familiar with linear algebra, the keyspace is somewhat akin to a finite vector space.)</p>
 
-        <p>Since our data is stored across many nodes, one characteristic of a regular hash table that we do not want to borrow is the idea of key rebalancing, and this is where consistent hashing comes into play. When a bucket is added to a regular hash table, <em>every</em> key stored in it must be recomputed, and this means that most of the keys and values also get moved around to different buckets. In a DHT, each physical node (machine) acts like a bucket in a regular hash table, so we <strike>want to</strike> must avoid such a costly rebalancing operation. Fortunately, consistent hashing solves this problem.</p>
+        <p>Since our data is stored across many nodes, one characteristic of a regular hash table that we do not want to borrow is the idea of key rebalancing, and this is where consistent hashing comes into play. When a bucket is added to a regular hash table, <em>every</em> key stored in it must be recomputed, and this means that most of the keys and values also get moved around to different buckets. In a DHT, each physical node (machine) acts like a bucket in a regular hash table, so we <strike>want to</strike> must avoid such a costly rebalancing operation between machines that may be, geographically, very far apart. Fortunately, consistent hashing solves this problem.</p>
 
         <p>Each node in the system will be given responsibility for a contiguous subset of this keyspace. So, hypothetically, if we had <i>n</i> nodes, each node would be the authoritative location for 2<sup>160</sup>/<i>n</i> keys. And which node is responsible for storing a given key? The first node whose ID value (more on this later) is greater than or equal to the key. Such a node is called the "successor node" of the key.</p>
 
@@ -53,9 +55,9 @@
 
         <p>As each node joins the network, it chooses a key at random to use as its ID. To locate the successor node responsible for a given key, we begin at the first node (with ID 0, in this case) and move clockwise around the ring until we locate the node whose ID is immediately greater than or equal to the key value. (Of course, we must take care to handle the wrap-around point on the ring when moving past key 7 back to key 0.)</p>
 
-        <p>From the diagram it's easy to understand why rebalancing is so much easier under this scheme. Suppose node 1 leaves the network. To preserve its data key 1 would be moved to node three, but the keys already stored at nodes 0 and 3 would be unaffected. Likewise, if we added a node with ID 6 then the key 6 would have to be moved from node 0 to node 6, but the keys stored on nodes 1 and 3 would be unaffected. This is far superior to the rebalancing situation in a conventional hash table when virtually all of the keys would be moved between buckets.</p>
+        <p>From the diagram it's easy to understand why rebalancing is so much easier under this scheme. Suppose node 1 leaves the network. To preserve its data key 1 would be moved to node 3, but the keys already stored at nodes 0 and 3 would be unaffected. Likewise, if we added a node with ID 6 then the key 6 would have to be moved from node 0 to node 6, but the keys stored on nodes 1 and 3 would be unaffected. This is far superior to the rebalancing situation in a conventional hash table when virtually all of the keys would be moved between buckets.</p>
 
-        <p>This idea of locating the successor node by comparing node IDs with keys (since both are hashes) is the central concept to making a working DHT. Virtually all the operations - joining the ring, storing values, finding values, replication, etc - are dependent on being able to locate the successor node to a given key.</p>
+        <p>This idea of locating the successor node by comparing node IDs with keys (since both are hashes in the same keyspace) is the central concept to making a working DHT. Virtually all the operations - joining the ring, storing values, finding values, replication, etc - are dependent on being able to locate the successor node to a given key.</p>
 
         <h3>Implementation Baby Steps</h3>
 
