@@ -32,7 +32,7 @@
             <li>Consistent Hashing: unlike a regular hash table, Keys and Values rarely need to be rebalanced.</li>
         </ul>
         
-        <p>These properties make DHTs an indespensible tool in modern software systems. They are the reason why BitTorrent can find files without using a centralized server, and how modern non-relational (so called "No SQL") datastores can acheive massive scale.</p>
+        <p>These properties make DHTs an indispensable tool in modern software systems. They are the reason why BitTorrent can find files without using a centralized server, and how modern non-relational (so called "No SQL") data-stores can achieve massive scale.</p>
 
         <h3>Consistent Hashing and the Keyspace</h3>
 
@@ -87,7 +87,7 @@
 
         <p>When a message has been handled, or 'relayed', at least <code>NumRelays</code> times we print a message indicating the message expiry and discard it. For messages that have not yet expired, the relaying process will select its <code>Next</code> or <code>Prev</code> neighbour depending on the desired <code>Direction</code> then pass the message along to that process (making sure to increment the relay counter).</p>
 
-        <p>We can start a message travelling around the ring by calling <code>send_cw/3</code> and <code>send_anti_cw/3</code>. Here's how it looks in practice:</p>
+        <p>We can start a message traveling around the ring by calling <code>send_cw/3</code> and <code>send_anti_cw/3</code>. Here's how it looks in practice:</p>
 
 <pre class="erlag-repl">> c(ring).
 > FirstProccess = ring:start(5).

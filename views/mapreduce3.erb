@@ -32,7 +32,7 @@
         <p>In this simple replication scheme, each peer will randomly select a replication partner. The peer will send it's partner a full copy of it's partition of the data set and, in return, the partner will monitor the health of the peer. If the peer crashes the partner will be notified and will bring that peer's data into it's own partition, thus preserving the portion of the dataset that would have been lost when the peer crashed.
         </p>
 
-        <p>To make clear what's going on, let's anthromorphize our servers and pretend that Alice and Bob are MapReduce servers having a conversation about replication:</p>
+        <p>To make clear what's going on, let's anthropomorphize our servers and pretend that Alice and Bob are MapReduce servers having a conversation about replication:</p>
 
         <ul>
             <li><b>Alice</b>: Hi Bob. I've chosen you to be my replication partner. I'll need you to keep a copy of my data safe in case anything happens to me.</li>
