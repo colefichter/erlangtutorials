@@ -1,0 +1,31 @@
+<%= partial :"partials/header", :locals => { :title => "Distributed Hash Table" } %>
+<body>
+<!-- Header -->
+<header id="header" class="skel-layers-fixed">
+    <%= partial :"partials/menu" %>
+</header>
+
+<!-- Main -->
+<section id="main" class="container">
+    <header>
+        <span class="icon major fa-cubes accent5"></span>
+        <h2>Distributed Hash Table Part Two</h2>
+        <p>Simulating a DHT using consistent hashing and a ring of lightweight Erlang processes.</p>
+    </header>
+    <div class="box">
+        <span class="image featured"><img src="images/dht/books_cropped.png" alt="" /></span>
+        
+        <p>In part one we introduced the concept of a distributed hash table and build a simple process ring. Here in part two we'll simulate a DHT with processes running in the same node. Finally, in part three we'll extend the process DHT to a full-blown, multi-node DHT.</p>
+
+        <p>
+            Complete code for this tutorial is available in the <a href="https://github.com/colefichter/process_dht">GitHub repository</a>.
+        </p>
+
+        <h3>Why Simulate a DHT?</h3>
+
+        <p>Creating a full-blown distributed hash table that works across physical machines is a bit daunting and requires careful attention to lots of nit-picky details about state machines and messaging. For this tutorial series, it makes sense to start off by focusing on the theory that powers the DHT, and extend a working system in small steps until it functions as a full-fledged DHT. The previous tutorial covered all of the theory we'll require, so here we'll get that theory working as a running system in a single node. Once we reach that point, essentially a simulation of a network of DHT nodes, it will just require some grunt work to convert it into a full-scale distributed system that runs across multiple physical machines.</p>
+
+    </div>
+</section>
+
+<%= partial :"partials/footer" %>
