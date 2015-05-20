@@ -22,15 +22,47 @@
 
         <h3>It's Hip To Be Square!</h3>
 
-        <p>So far in this tutorial series we made a lightweight key/value server that held its state in memory. We then modified the server to store and reload the state so that values would not be lost when the server was shut down. This all works really well, and you'd be justified in relying on this feature in a production system. However, when programming it's good to be a conformist. Following expected conventions and best practices makes maintenance and future changes much easier for you as well as any other programmer who might end up dealing with your software.</p>
+        <p>So far in this tutorial series we made a lightweight key/value server that held its state in memory. We then modified the server to store and reload the state so that values would not be lost when the server was shut down. This all works very well, and you'd be justified in relying on this feature in a production system. However, when programming it's good to be a conformist. Following expected conventions and best practices makes maintenance and future changes much easier for you as well as any other programmer who might end up dealing with your software.</p>
 
         <p>It turns out that making small, single-purpose servers (like this one) is an extremely common task in Erlang, and so there already exist excellent facilities to assist you. So, to conform to conventions (and in the spirit of the <a href="http://en.wikipedia.org/wiki/Principle_of_least_astonishment">principle of least astonishment</a>) let's convert our server into an OTP-compliant module by refactoring it to implement the <code>gen_server</code> behaviour. As you'll see, this is really easy, and actually <em>reduces</em> the number of lines of code slightly!</p>
 
-        <p>If you are following along, the existing code for the persistent key value server is in the GitHub repository in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl">pkv.erl</a>. The final version, which conforms to the usual OTP conventions is in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl">pkv2.erl</a>.</p>
+        <p>If you are following along, the existing code for the persistent key value server is in the <a href="https://github.com/colefichter/key_value_tutorial">GitHub repository</a> in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl">pkv.erl</a>. The final version, which conforms to the usual OTP conventions is in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl">pkv2.erl</a>.</p>
       
         <h3>Refactoring</h3>
 
-        <p>Let's begin by ... TODO FINISH ME.</p>
+        <p>Let's begin by removing the <code>rpc</code> function (it's not needed any more, since <code>gen_server</code> handles that) and declaring the behaviour:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=1:3"></div>
+
+        <p>Next, we'll convert the client API to use the provided message passing functions in the gen_server library:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=13:25"></div>
+
+        <p>Notice that the <code>start/0</code> function has become <code>start_link/0</code> to conform to convention. This is the only change required to the client-facing API.</p>
+
+        <p>To refactor the server implementation, we move the disk persistence features into <code>init/1</code> and <code>terminate/2</code>:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=27:33"></div>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=58:60"></div>
+
+        <p>and add the following three unused callbacks, which are required by the <code>gen_server</code> behaviour:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=35"></div>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=62"></div>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=54:56"></div>
+
+        <p>Finally, we convert the old server loop <code>receive</code> block:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl?slice=36:58"></div>
+
+        <p>into the equivalent set of synchronous callback handlers:</p>
+
+        <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=37:52"></div>
+
+        <p>And that's it! The <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl#L64-L89">utility functions</a> remain unchanged, so there is nothing else required to make this module conform the standard Erlang/OTP conventions. The module can be still be used by directly invoking the client API, but it can also now be packaged as a stand-alone OTP application, or included in an existing application's supervision tree.</p>
 
     </div>
 </section>
