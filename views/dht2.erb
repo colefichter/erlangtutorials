@@ -23,7 +23,7 @@
 
         <h3>Why Simulate a DHT?</h3>
 
-        <p>Creating a full-blown distributed hash table that works across physical machines is a bit daunting and requires careful attention to lots of nit-picky details about state machines and messaging. For this tutorial series, it makes sense to start off by focusing on the theory that powers the DHT, and extend a working system in small steps until it functions as a full-fledged DHT. The previous tutorial covered all of the theory we'll require, so here we'll get that theory working as a running system in a single node. Once we reach that point, essentially a simulation of a network of DHT nodes, it will just require some grunt work to convert it into a full-scale distributed system that runs across multiple physical machines.</p>
+        <p>Creating a full-blown distributed hash table that works across physical machines is a bit daunting and requires careful attention to lots of nit-picky details. For this tutorial series, it makes sense to start off by focusing on the theory that powers the DHT, then extend a working system in small steps until it becomes a full-fledged DHT. The previous tutorial covered the theory we'll need, so here we'll get that theory working as a running system in a single node. Once we reach that point, essentially a simulation of a network of DHT nodes, it will only require some grunt work to convert it into a full-scale distributed system that runs on a cluster.</p>
 
         <h3>Simulating a DHT</h3>
 
@@ -31,13 +31,13 @@
 
         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=13:24"></div>
 
-        <p>As I alluded in the previous part of this tutorial, notice that the critical operation in both of those functions is to locate the server responsible for storing a given key; this occurs in the <code>key_lookup/1</code> call. Since the key lookup is the most crucial part of this DHT, let's take a close look at that feature. Once you understand it, building the rest of the DHT is just straight-forward business logic.</p>
+        <p>As I alluded in the previous part of this tutorial, notice that the critical operation in both of those functions is to locate the server responsible for storing a given key; this occurs in the <code>key_lookup/1</code> function. Since the key lookup is the most crucial part of this DHT, let's take a close look at that feature. Once you understand it, building the rest of the DHT is just straight-forward business logic.</p>
 
         <h3>Locating Keys on a Consistent Hash Ring</h3>
 
-        <p>To find the node responsible for storing a given key, we "walk" clockwise from the key's location around the hash ring, and the first server encountered is the node we're looking for. More correctly, we need to locate the <em>first</em> server whose ID is greater than or equal to the key in question.</p>
+        <p>To find the node responsible for storing a given key, we "walk" clockwise from the key's location around the hash ring, and the first server encountered is the node we're looking for. More precisely, we need to find the <em>first</em> server whose ID is greater than or equal to the key in question.</p>
 
-        <p>In practice, a client can send a key lookup request to any node in the DHT, but in this simulation we'll register the first node in the DHT with the name <code>dht_root_node</code> so that clients can send all requests to a known process. I've also wrapped the client-server communication in a very simple function called <code>rpc/1</code> to make the client API cleaner. Let's take a look:</p>
+        <p>In practice a client can send a key lookup request to any node in the DHT, but in this simulation we'll register the first node in the ring with the name <code>dht_root_node</code> so that all requests can be sent to a known process. I've also wrapped the client-server communication in a very simple function called <code>rpc/1</code> to make the API cleaner:</p>
 
         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=30:31"></div>
 
@@ -51,7 +51,7 @@
             <li>This server cannot answer the question "where does this key belong", so the message must be forwarded to the next server.</li>
         </ol>
 
-        <p>In cases 1) and 2) the server handling this message can respond directly to the client with an authoritative answer to the location of the key. In case 3), the message will have to be passed clockwise around the ring to the next server (known as a neighbour). The neighbouring server will then repeat this decision process until the request arrives at the node that has the answer. When the answer is known, a message will be sent directly back to the requesting client, rather than backtracking the response through all of the nodes that handled the request along the way.</p>
+        <p>In cases 1) and 2) the 'current' server can respond directly to the client with an authoritative answer to the location of the key. In case 3), the message will have to be passed clockwise around the ring to the next server (known as a neighbour). The neighbouring server will then repeat this decision process until the request arrives at the node that has the answer. When the answer is known, a message will be sent directly back to the requesting client, rather than backtracking the response through all of the nodes that handled the request along the way.</p>
 
         <p>If that process sounds confusing, don't worry: it can be. You might find it helpful to take another look at <a href="images/dht/ring.png">the diagram in the first part of this tutorial series</a>. Below is the server implementation of the process described above. Study it until you understand it, because it is <em>the most important aspect</em> of a distributed hash table.</p>
 
