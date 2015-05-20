@@ -53,6 +53,12 @@ end
   end
 end
 
+['/kv3', '/kv3.html'].each do |path|
+  get path do
+    erb :kv3
+  end
+end
+
 ['/dht1', '/dht1.html'].each do |path|
   get path do
     erb :dht1

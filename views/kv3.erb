@@ -1,0 +1,38 @@
+<%= partial :"partials/header", :locals => { :title => "Key/Value Server" } %>
+<body>
+<!-- Header -->
+<header id="header" class="skel-layers-fixed">
+    <%= partial :"partials/menu" %>
+</header>
+
+<!-- Main -->
+<section id="main" class="container">
+    <header>
+        <span class="icon major fa-cogs accent2"></span>
+        <h2>Key/Value Server Part Three</h2>
+        <p>Refactoring the key/value server so that it conforms to Eralng/OTP conventions.</p>
+    </header>
+    <div class="box">
+        <span class="image featured"><img src="images/kv/keys_cropped.jpg" alt="" /></span>
+        <p>In <a href="kv1">part one</a> we created an in-memory key/value storage system. Then, in <a href="kv2">part two</a> we made it persist the state to disk during shutdowns. Now, in this final section, we'll update the server to use the OTP behaviour called <code>gen_server</code>.</p>
+
+        <p>
+            Complete code for this tutorial is available in the <a href="https://github.com/colefichter/key_value_tutorial">GitHub repository</a>.
+        </p>
+
+        <h3>It's Hip To Be Square!</h3>
+
+        <p>So far in this tutorial series we made a lightweight key/value server that held its state in memory. We then modified the server to store and reload the state so that values would not be lost when the server was shut down. This all works really well, and you'd be justified in relying on this feature in a production system. However, when programming it's good to be a conformist. Following expected conventions and best practices makes maintenance and future changes much easier for you as well as any other programmer who might end up dealing with your software.</p>
+
+        <p>It turns out that making small, single-purpose servers (like this one) is an extremely common task in Erlang, and so there already exist excellent facilities to assist you. So, to conform to conventions (and in the spirit of the <a href="http://en.wikipedia.org/wiki/Principle_of_least_astonishment">principle of least astonishment</a>) let's convert our server into an OTP-compliant module by refactoring it to implement the <code>gen_server</code> behaviour. As you'll see, this is really easy, and actually <em>reduces</em> the number of lines of code slightly!</p>
+
+        <p>If you are following along, the existing code for the persistent key value server is in the GitHub repository in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv.erl">pkv.erl</a>. The final version, which conforms to the usual OTP conventions is in a file called <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl">pkv2.erl</a>.</p>
+      
+        <h3>Refactoring</h3>
+
+        <p>Let's begin by ... TODO FINISH ME.</p>
+
+    </div>
+</section>
+
+<%= partial :"partials/footer" %>
