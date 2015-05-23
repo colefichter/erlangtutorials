@@ -29,7 +29,11 @@
 
         <p>As with a normal key/value store, this DHT will have a simple client interface: <code>store(Key, Value)</code> and <code>fetch(Key)</code>. Unlike a normal key/value store, however, notice that consistent hashing allows (requires!) the <em>client</em> to compute the hash. Here are the implementations of those functions:</p>
 
-        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=13:24"></div>
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=21:24"></div>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=17:19"></div>
+
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=33:39"></div>
 
         <p>As I alluded in the previous part of this tutorial, notice that the critical operation in both of those functions is to locate the server responsible for storing a given key; this occurs in the <code>key_lookup/1</code> function. Since the key lookup is the most crucial part of this DHT, let's take a close look at that feature. Once you understand it, building the rest of the DHT is just straight-forward business logic.</p>
 
@@ -37,11 +41,9 @@
 
         <p>To find the node responsible for storing a given key, we "walk" clockwise from the key's location around the hash ring, and the first server encountered is the node we're looking for. More precisely, we need to find the <em>first</em> server whose ID is greater than or equal to the key in question.</p>
 
-        <p>In practice a client can send a key lookup request to any node in the DHT, but in this simulation we'll register the first node in the ring with the name <code>dht_root_node</code> so that all requests can be sent to a known process. I've also wrapped the client-server communication in a very simple function called <code>rpc/1</code> to make the API cleaner:</p>
+        <p>In practice a client can send a key lookup request to any node in the DHT, but in this simulation we'll register the first node in the ring with the name <code>dht_root_node</code> so that all requests can be sent to a known process. Also note that there is no longer a need for the <code>rpc</code> function, since we're now using an OTP-compliant behaviour, <code>gen_server</code>:</p>
 
-        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=30:31"></div>
-
-        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=130:136"></div>
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=41:44"></div>
 
         <p>When a server receives a <code>key_lookup</code> request, there are three possibilities:</p>
 
@@ -55,11 +57,38 @@
 
         <p>If that process sounds confusing, don't worry: it can be. You might find it helpful to take another look at <a href="images/dht/ring.png">the diagram in the first part of this tutorial series</a>. Below is the server implementation of the process described above. Study it until you understand it, because it is <em>the most important aspect</em> of a distributed hash table.</p>
 
-        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=90:106"></div>
+        <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=131:145"></div>
 
         <h3>Finding Your Place in the World</h3>
 
-        <p>Closely related to the idea of finding the location on the hash ring of a given key is the idea of determining where on the hash ring a given server belongs. When a node joins the ring, this is an important question to answer so that the node can locate its rightful neighbours (its 'previous' and 'next' nodes) and instruct them to update their neighbour references to point to the new node. By treating its hashed ID as a regular key, the new node inserts itself in between two existing nodes in the ring, and takes over responsibility for some of the keys that fall in the affected range of the ring. I call this process <code>find_neighbours</code> and it works very much like the <code>key_lookup</code> operation, except that we return both of the neighbouring nodes for the given location.</p>
+        <p>Closely related to the idea of locating a key on the hash ring is the idea of determining where on the hash ring a given server belongs. When a node joins the ring, this is an important question to answer so that the node can locate its rightful neighbours (its 'previous' and 'next' nodes) and instruct them to update their neighbour references to point to the new node. By treating its hashed ID as a regular key, the new node inserts itself in between two existing nodes in the ring, and takes over responsibility for some of the keys that fall in the affected range of the ring. I call this task <code>find_neighbours</code> and it works very much like the <code>key_lookup</code> operation, except that we return both of the neighbouring nodes for the given location. The code should look quite familiar:</p>
+
+         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=115:129"></div>
+
+         <h3>Unconventional Messaging</h3>
+
+         <p>There is only really one interesting item remaining to discuss: the somewhat unconventional messaging that occurs for the <code>key_lookup</code> and <code>find_neighbours</code> operations (and, generally, any task that requires a search around the hash ring to locate a key's position). When a request to locate a node is sent to <code>dht_root_node</code>, we have to assume that in many cases the node we send the request to will not know the answer, and will thus need to forward the request on around the ring until it arrives at a node that does know the answer. This is somewhat unusual, since a typical <code>gen_server</code> request/response cycle consists of a client sending a request to a server process and receiving a direct reply back from that server.
+         </p>
+
+         <p>Fortunately, the <code>gen_server</code> behaviour can handle this situation. As you can see in the <code>key_lookup</code> operation below, we send the client's process ID in the <code>cast</code>. The server that handles the <code>cast</code> returns a <code>{noreply, State}</code> tuple and forwards the request on (if necessary). When a server can finally answer the request, it unpacks the <code>RequestingPid</code> from the request and fires a message directly back at the client.</p>
+
+         <h1>TODO: DIAGRAM!</h1>
+
+         <p>The request from the client, including the client's <code>Pid</code> is familiar:</p>
+
+         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=42:44"></div>
+
+         <p>And the server's non-response:</p>
+
+         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=75:77"></div>
+
+         <p>Finally, the <code>gen_server:cast</code> call sends a message directly back the client, regardless of which server is actually sending that response:</p>
+
+         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=141:145"></div>
+
+         <p>Back at the client, intercepting the eventual reply (regardless of which server it comes from) is easy, if unorthodox:</p>
+
+         <div data-gistit="https://github.com/colefichter/process_dht/blob/master/src/dht_server.erl?slice=109:113"></div>
 
     </div>
 </section>
