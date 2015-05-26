@@ -67,12 +67,16 @@
 
          <h3>Unconventional Messaging</h3>
 
-         <p>There is only really one interesting item remaining to discuss: the somewhat unconventional messaging that occurs for the <code>key_lookup</code> and <code>find_neighbours</code> operations (and, generally, any task that requires a search around the hash ring to locate a key's position). When a request to locate a node is sent to <code>dht_root_node</code>, we have to assume that in many cases the node we send the request to will not know the answer, and will thus need to forward the request on around the ring until it arrives at a node that does know the answer. This is somewhat unusual, since a typical <code>gen_server</code> request/response cycle consists of a client sending a request to a server process and receiving a direct reply back from that server.
+         <p>There is only one interesting item remaining to discuss: the somewhat unconventional messaging that occurs for the <code>key_lookup</code> and <code>find_neighbours</code> operations (and, generally, any task that requires a search around the hash ring to locate a key's position). When a request to locate a node is sent to <code>dht_root_node</code>, we have to assume that in many cases the node we send the request to will not know the answer, and will thus need to forward the request on around the ring until it arrives at a node that does know the answer. This is somewhat unusual, since a typical <code>gen_server</code> request/response cycle consists of a client sending a request to a server process and receiving a direct reply back from that server.
          </p>
 
-         <p>Fortunately, the <code>gen_server</code> behaviour can handle this situation. As you can see in the <code>key_lookup</code> operation below, we send the client's process ID in the <code>cast</code>. The server that handles the <code>cast</code> returns a <code>{noreply, State}</code> tuple and forwards the request on (if necessary). When a server can finally answer the request, it unpacks the <code>RequestingPid</code> from the request and fires a message directly back at the client.</p>
+         <p>The following diagram illustrates such a key search, supposing a client is looking for Key 37, and initiates the request with the node whose ID is 10:</p>
 
-         <h1>TODO: DIAGRAM!</h1>
+         <figure>
+            <img src="images/dht/messaging.png" />
+         </figure>
+
+         <p>Fortunately, the <code>gen_server</code> behaviour can handle this situation. As you can see in the <code>key_lookup</code> operation below, we send the client's process ID in the <code>cast</code>. The server that handles the <code>cast</code> returns a <code>{noreply, State}</code> tuple and forwards the request on (if necessary). When a server can finally answer the request, it unpacks the <code>RequestingPid</code> from the request and fires a message directly back at the client.</p>
 
          <p>The request from the client, including the client's <code>Pid</code> is familiar:</p>
 
