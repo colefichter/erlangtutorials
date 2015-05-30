@@ -71,6 +71,12 @@ end
   end
 end
 
+['/google0363eef37e506ec9.html'].each do |path|
+  get path do
+    File.read(File.join('public', 'google0363eef37e506ec9.html'))
+  end
+end
+
 get '*' do |path|
   redirect to('/')
 end
