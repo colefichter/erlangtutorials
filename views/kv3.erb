@@ -62,7 +62,33 @@
 
         <div data-gistit="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl?slice=37:52"></div>
 
-        <p>And that's it! The <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl#L64-L89">utility functions</a> remain unchanged, so there is nothing else required to make this module conform the standard Erlang/OTP conventions. The module can be still be used by directly invoking the client API, but it can also now be packaged as a stand-alone OTP application, or included in an existing application's supervision tree.</p>
+        <h3>Something Is Missing</h3>
+
+        <p>You may have noticed that the server implementation above is missing a stop function (which <a href="/kv2">we added in the previous tutorial</a>). Why is this? When using the gen_server behaviour you have some options available, depending on whether or not you plan to use your module in a supervision tree.</p>
+
+        <p>In this case, I do intend to use this module in a supervision tree, so there is no need to add a client function and server handler for stopping the service. The supervision tree will handle that, ensuring that <code>terminate(shutdown, State)</code> (see above) is called.</p>
+
+        <p>To use the module on its own, outside of a supervision tree, I would need to add some code to stop the service. The client API function might look like:</p>
+
+<pre brush="erlang">
+stop() -> gen_server:cast(?MODULE, stop).    
+</pre>
+
+        <p>And the server code might look like:</p>
+
+<pre brush="erlang">
+handle_cast(stop, State) -> {stop, normal, State}.
+
+terminate(normal, State) ->
+    write_to_disk(Dict),
+    ok.
+</pre>
+
+        <p>You can find complete details about this in the <a href="http://www.erlang.org/doc/design_principles/gen_server_concepts.html#id67141">Erlang docs</a>.
+
+        <h3>Finished!</h3>
+
+        <p>That's it! The <a href="https://github.com/colefichter/key_value_tutorial/blob/master/pkv2.erl#L64-L89">utility functions</a> remain unchanged, so there is nothing else required to make this module conform to Erlang/OTP conventions. The module can be still be used by directly invoking the client API, but it can also now be packaged as a stand-alone OTP application, or included in an existing application's supervision tree.</p>
 
     </div>
 </section>
