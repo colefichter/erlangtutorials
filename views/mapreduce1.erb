@@ -82,7 +82,6 @@
 
         <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=76:80"></div>
 
-
         <p>The <code>print</code> operation lists some diagnostic information to the shell and then requests that each worker print its information as well:</p>
 
         <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=72:75"></div>
@@ -115,9 +114,24 @@
 
         <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=50:52"></div>
 
+        <h3>A Note About Rebalancing</h3>
+
+        <p>Since the MapReduce paradigm is all about calculations on a <em>distributed</em> dataset, it wouldn't make sense to have some workers handling small or empty sub-sets of the data. I mentioned above that the server invokes a <code>rebalance</code> operation every time a new worker is added. Why? Because this forces the system to shuffle data around between the workers in an effort to keep the dataset evenly distributed. When a server calls its own <code>mrs:rebalance()</code> function, it sends itself a <code>{rebalance}</code> message:
+        </p>
+
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=28:29"></div>
+
+        <p>and here is how it handles that message:</p>
+
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/mrs.erl?slice=59:71"></div>
+
+        <p>It sends each of it's workers a command to rebalance the data. Each worker scans its stored list of integers and returns any integers that must be moved to a different worker. The server then takes the <code>{purged_data, Items}</code> responses and stores them back in the cluster, so that they (eventually) end up stored by a different worker process. Here's the code that the worker uses to fulfill the <code>rebalance</code> command:</p>
+
+        <div data-gistit="https://github.com/colefichter/DistributedMapReduce/blob/master/src/worker.erl?slice=20:24"></div>
+
         <h3>MapReduce Algorithms</h3>
 
-        <p>With the server and worker code complete, the final component we need to use the MapReduce system is a collection of algorithms to carry out meaningful computations over the data set. Each MapReduce algorithm we write will have the same format: inside an API call, we'll define a <code>map</code> function, then define a <code>reduce</code> function, then invoke <code>mrs:mapreduce(Map, Reduce)</code> to run the computation.</p>
+        <p>With the server and worker code complete, the final component we need to use the MapReduce system is a collection of algorithms to carry out meaningful computations over the data set. Each MapReduce algorithm we write will have the same format inside an API call, we'll define a <code>map</code> function, then define a <code>reduce</code> function, then invoke <code>mrs:mapreduce(Map, Reduce)</code> to run the computation.</p>
 
         <p>
             For example, to count the number of integers stored in our system, our <code>map</code> function will output <code>1</code> regardless of the stored value, then our reduce function will count how many ones were emitted:
@@ -156,6 +170,7 @@
             <li>Find a more efficient way to compute the <code>sum</code> of the stored integers.</li>
             <li>Change the system to store any Erlang term, rather than integers only.</li>
             <li>Adjust the system to automatically add workers as the size of the data set grows.</li>
+            <li>Can you find any problems with the current method of fairly balancing the data among all the workers? What are some other ways to balance out the data that don't require as much reshuffling when workers are added?</li>
         </ul>
         
         <h3>Part Two: Distributing The System</h3>
